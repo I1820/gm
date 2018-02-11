@@ -100,6 +100,10 @@ func New(name string, gip string) (Gateway, error) {
 	}, nil
 }
 
+func database(name string) {
+	// TODO: create database container
+}
+
 // Remove removes runner docker
 func (g Gateway) Remove() error {
 	ctx := context.Background()
