@@ -23,6 +23,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+var gateways []gateway.Gateway
+
+func init() {
+	gateways = make([]gateway.Gateway, 0)
+}
+
 // handle registers apis and create http handler
 func handle() http.Handler {
 	r := gin.Default()
@@ -32,6 +38,7 @@ func handle() http.Handler {
 		api.GET("/about", aboutHandler)
 
 		api.POST("/gateway", gatewayNewHandler)
+		api.GET("/gateway", gatewayListHandler)
 	}
 
 	r.NoRoute(func(c *gin.Context) {
@@ -77,6 +84,10 @@ func aboutHandler(c *gin.Context) {
 	c.String(http.StatusOK, "18.20 is leaving us")
 }
 
+func gatewayListHandler(c *gin.Context) {
+	c.JSON(http.StatusOK, gateways)
+}
+
 func gatewayNewHandler(c *gin.Context) {
 	var json gatewayReq
 	if err := c.BindJSON(&json); err != nil {
@@ -92,6 +103,8 @@ func gatewayNewHandler(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	gateways = append(gateways, g)
 
 	c.JSON(http.StatusOK, g)
 }
