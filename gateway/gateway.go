@@ -44,7 +44,7 @@ func init() {
 }
 
 // New creates gateway docker with given user name
-func New(name string) (Gateway, error) {
+func New(name string, gip string) (Gateway, error) {
 	rand := rand.New(rand.NewSource(time.Now().Unix()))
 	ctx := context.Background()
 
@@ -63,6 +63,17 @@ func New(name string) (Gateway, error) {
 			Image: imageName,
 			ExposedPorts: nat.PortSet{
 				lport: struct{}{},
+			},
+			Env: []string{
+				"DB_AUTOMIGRATE=true",
+				"LOG_NODE_FRAMES=true",
+				"NET_ID=010203",
+				"BAND=EU_863_870",
+				"REDIS_URL=redis://redis:6379",
+				fmt.Sprintf("GW_MQTT_SERVER=%s", gip),
+				"GW_SERVER_JWT_SECRET=verysecret",
+				"POSTGRES_DSN=postgres://loraserver_ns:loraserver_ns@postgresql_ns/loraserver_ns?sslmode=disable",
+				"JS_SERVER=http://appserver:8003",
 			},
 		},
 		&container.HostConfig{
