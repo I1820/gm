@@ -19,6 +19,7 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/aiotrc/gm/gateway"
 	"github.com/gin-gonic/gin"
 )
 
