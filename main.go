@@ -11,100 +11,92 @@
 package main
 
 import (
-	"context"
 	"fmt"
-	"log"
-	"net/http"
+	"math/rand"
 	"os"
 	"os/signal"
-	"time"
 
-	"github.com/aiotrc/gm/gateway"
-	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
+
+	"github.com/jinzhu/configor"
+
+	"github.com/yosssi/gmq/mqtt"
+	"github.com/yosssi/gmq/mqtt/client"
+
+	mgo "gopkg.in/mgo.v2"
 )
 
-var gateways []gateway.Gateway
-
-func init() {
-	gateways = make([]gateway.Gateway, 0)
-}
-
-// handle registers apis and create http handler
-func handle() http.Handler {
-	r := gin.Default()
-
-	api := r.Group("/api")
-	{
-		api.GET("/about", aboutHandler)
-
-		api.POST("/gateway", gatewayNewHandler)
-		api.GET("/gateway", gatewayListHandler)
+// Config represents main configuration
+var Config = struct {
+	DB struct {
+		URL string `default:"mongodb://172.18.0.1:27017" env:"db_url"`
 	}
-
-	r.NoRoute(func(c *gin.Context) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "404 Not Found"})
-	})
-
-	return r
-}
+	Broker struct {
+		URL string `default:"127.0.0.1:1883" env:"broker_url"`
+	}
+}{}
 
 func main() {
 	fmt.Println("GM AIoTRC @ 2018")
 
-	r := handle()
-
-	srv := &http.Server{
-		Addr:    ":1373",
-		Handler: r,
+	// Load configuration
+	if err := configor.Load(&Config, "config.yml"); err != nil {
+		panic(err)
 	}
 
-	go func() {
-		fmt.Printf("GM Listen: %s\n", srv.Addr)
-		// service connections
-		if err := srv.ListenAndServe(); err != nil {
-			log.Fatal("Listen Error:", err)
-		}
-	}()
-
-	// Wait for interrupt signal to gracefully shutdown the server with
-	// a timeout of 5 seconds.
-	quit := make(chan os.Signal)
-	signal.Notify(quit, os.Interrupt)
-	<-quit
-	fmt.Println("GM Shutdown")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatal("Shutdown Error:", err)
-	}
-}
-
-func aboutHandler(c *gin.Context) {
-	c.String(http.StatusOK, "18.20 is leaving us")
-}
-
-func gatewayListHandler(c *gin.Context) {
-	c.JSON(http.StatusOK, gateways)
-}
-
-func gatewayNewHandler(c *gin.Context) {
-	var json gatewayReq
-	if err := c.BindJSON(&json); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	name := json.Name
-	address := json.Address
-
-	g, err := gateway.New(name, address)
+	// Create a Mongo Session
+	session, err := mgo.Dial(Config.DB.URL)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		log.Fatalf("Mongo session %s: %v", Config.DB.URL, err)
+	}
+	defer session.Close()
+	fmt.Printf("Mongo session %s has been created\n", Config.DB.URL)
+
+	// Optional. Switch the session to a monotonic behavior.
+	session.SetMode(mgo.Monotonic, true)
+
+	// Create an MQTT client
+	cli := client.New(&client.Options{
+		ErrorHandler: func(err error) {
+			log.WithFields(log.Fields{
+				"component": "gm",
+			}).Errorf("MQTT Client %s", err)
+		},
+	})
+	defer cli.Terminate()
+
+	// Connect to the MQTT Server.
+	if err := cli.Connect(&client.ConnectOptions{
+		Network:  "tcp",
+		Address:  Config.Broker.URL,
+		ClientID: []byte(fmt.Sprintf("isrc-uplink-%d", rand.Int63())),
+	}); err != nil {
+		log.Fatalf("MQTT session %s: %s", Config.Broker.URL, err)
+	}
+	fmt.Printf("MQTT session %s has been created\n", Config.Broker.URL)
+
+	// Subscribe to topics
+	err = cli.Subscribe(&client.SubscribeOptions{
+		SubReqs: []*client.SubReq{
+			&client.SubReq{
+				// https://docs.loraserver.io/use/getting-started/
+				TopicFilter: []byte("gateway/+/rx"),
+				QoS:         mqtt.QoS0,
+				Handler: func(topicName, message []byte) {
+				},
+			},
+		},
+	})
+	if err != nil {
+		log.Fatalf("MQTT subscription: %s", err)
 	}
 
-	gateways = append(gateways, g)
+	// Set up channel on which to send signal notifications.
+	sigc := make(chan os.Signal, 1)
+	signal.Notify(sigc, os.Interrupt, os.Kill)
 
-	c.JSON(http.StatusOK, g)
+	// Wait for receiving a signal.
+	<-sigc
+
+	fmt.Println("18.20 As always ... left me alone")
 }
