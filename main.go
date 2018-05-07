@@ -83,6 +83,7 @@ func main() {
 				TopicFilter: []byte("gateway/+/rx"),
 				QoS:         mqtt.QoS0,
 				Handler: func(topicName, message []byte) {
+					fmt.Println(string(message))
 				},
 			},
 		},
