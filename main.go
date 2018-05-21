@@ -11,6 +11,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"os"
@@ -32,7 +33,7 @@ var Config = struct {
 		URL string `default:"mongodb://172.18.0.1:27017" env:"db_url"`
 	}
 	Broker struct {
-		URL string `default:"127.0.0.1:1883" env:"broker_url"`
+		URL string `default:"172.23.132.37:1884" env:"broker_url"`
 	}
 }{}
 
@@ -84,6 +85,11 @@ func main() {
 				QoS:         mqtt.QoS0,
 				Handler: func(topicName, message []byte) {
 					fmt.Println(string(message))
+
+					var m map[string]interface{}
+					json.Unmarshal(message, &m)
+
+					fmt.Println(m)
 				},
 			},
 		},
