@@ -74,7 +74,10 @@ func main() {
 					fmt.Println()
 
 					var m lora.GatewayMessage
-					json.Unmarshal(message, &m)
+					if err := json.Unmarshal(message, &m); err != nil {
+						log.Error(err)
+						return
+					}
 
 					macPayload := m.PhyPayload.MACPayload.(*lorawan.MACPayload)
 					fmt.Printf("DevAddr: %v", macPayload.FHDR.DevAddr)
