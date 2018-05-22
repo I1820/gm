@@ -90,7 +90,7 @@ func main() {
 					var m lora.GatewayMessage
 					json.Unmarshal(message, &m)
 
-					fmt.Println(m)
+					fmt.Println(m.PhyPayload.MHDR.MType)
 				},
 			},
 		},
