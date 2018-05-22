@@ -32,6 +32,11 @@ var Config = struct {
 	Broker struct {
 		URL string `default:"172.23.132.37:1884" env:"broker_url"`
 	}
+	Device struct {
+		Addr    string `default:"00000030"`
+		AppSKey [16]byte
+		NetSKey [16]byte
+	}
 }{}
 
 func main() {
@@ -80,7 +85,15 @@ func main() {
 					}
 
 					macPayload := m.PhyPayload.MACPayload.(*lorawan.MACPayload)
-					fmt.Printf("DevAddr: %v", macPayload.FHDR.DevAddr)
+					if Config.Device.Addr == fmt.Sprintf("%v", macPayload.FHDR.DevAddr) {
+						ok, err := m.PhyPayload.ValidateMIC(Config.Device.NetSKey)
+						if err != nil {
+							log.Error(err)
+						}
+						if !ok {
+							log.Error("Invalid MIC")
+						}
+					}
 				},
 			},
 		},
