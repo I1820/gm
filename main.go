@@ -91,6 +91,10 @@ func main() {
 					json.Unmarshal(message, &m)
 
 					fmt.Println(m.PhyPayload.MHDR.MType)
+					fmt.Println(m.PhyPayload.MHDR.RFU)
+					fmt.Println(m.PhyPayload.MHDR.Major)
+
+					fmt.Println(m.PhyPayload.FHDR.DevAddr)
 				},
 			},
 		},
