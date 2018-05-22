@@ -18,21 +18,17 @@ import (
 	"os/signal"
 
 	"github.com/aiotrc/gm/lora"
+	"github.com/brocaar/lorawan"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/jinzhu/configor"
 
 	"github.com/yosssi/gmq/mqtt"
 	"github.com/yosssi/gmq/mqtt/client"
-
-	mgo "gopkg.in/mgo.v2"
 )
 
 // Config represents main configuration
 var Config = struct {
-	DB struct {
-		URL string `default:"mongodb://172.18.0.1:27017" env:"db_url"`
-	}
 	Broker struct {
 		URL string `default:"172.23.132.37:1884" env:"broker_url"`
 	}
@@ -45,17 +41,6 @@ func main() {
 	if err := configor.Load(&Config, "config.yml"); err != nil {
 		panic(err)
 	}
-
-	// Create a Mongo Session
-	session, err := mgo.Dial(Config.DB.URL)
-	if err != nil {
-		log.Fatalf("Mongo session %s: %v", Config.DB.URL, err)
-	}
-	defer session.Close()
-	fmt.Printf("Mongo session %s has been created\n", Config.DB.URL)
-
-	// Optional. Switch the session to a monotonic behavior.
-	session.SetMode(mgo.Monotonic, true)
 
 	// Create an MQTT client
 	cli := client.New(&client.Options{
@@ -71,14 +56,14 @@ func main() {
 	if err := cli.Connect(&client.ConnectOptions{
 		Network:  "tcp",
 		Address:  Config.Broker.URL,
-		ClientID: []byte(fmt.Sprintf("isrc-uplink-%d", rand.Int63())),
+		ClientID: []byte(fmt.Sprintf("isrcgm-%d", rand.Int63())),
 	}); err != nil {
 		log.Fatalf("MQTT session %s: %s", Config.Broker.URL, err)
 	}
 	fmt.Printf("MQTT session %s has been created\n", Config.Broker.URL)
 
 	// Subscribe to topics
-	err = cli.Subscribe(&client.SubscribeOptions{
+	if err := cli.Subscribe(&client.SubscribeOptions{
 		SubReqs: []*client.SubReq{
 			&client.SubReq{
 				// https://docs.loraserver.io/use/getting-started/
@@ -86,20 +71,17 @@ func main() {
 				QoS:         mqtt.QoS0,
 				Handler: func(topicName, message []byte) {
 					fmt.Println(string(message))
+					fmt.Println()
 
 					var m lora.GatewayMessage
 					json.Unmarshal(message, &m)
 
-					fmt.Println(m.PhyPayload.MHDR.MType)
-					fmt.Println(m.PhyPayload.MHDR.RFU)
-					fmt.Println(m.PhyPayload.MHDR.Major)
-
-					fmt.Println(m.PhyPayload.FHDR.DevAddr)
+					macPayload := m.PhyPayload.MACPayload.(*lorawan.MACPayload)
+					fmt.Printf("DevAddr: %v", macPayload.FHDR.DevAddr)
 				},
 			},
 		},
-	})
-	if err != nil {
+	}); err != nil {
 		log.Fatalf("MQTT subscription: %s", err)
 	}
 

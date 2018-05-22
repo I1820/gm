@@ -9,6 +9,21 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/brocaar/lorawan"
+  packages = ["."]
+  revision = "f359b50e77d1f421e9201846f425986017ffd851"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/jacobsa/crypto"
+  packages = [
+    "cmac",
+    "common"
+  ]
+  revision = "c73681c634de898c869684602cf0c0d2ce938c4d"
+
+[[projects]]
+  branch = "master"
   name = "github.com/jinzhu/configor"
   packages = ["."]
   revision = "ec34f328956f53dfbd06e9f5306e37e6943443c3"
@@ -45,18 +60,6 @@
   revision = "6f686a352de66814cdd080d970febae7767857a3"
 
 [[projects]]
-  branch = "v2"
-  name = "gopkg.in/mgo.v2"
-  packages = [
-    ".",
-    "bson",
-    "internal/json",
-    "internal/sasl",
-    "internal/scram"
-  ]
-  revision = "3f83fa5005286a7fe593b055f0d7771a7dce4655"
-
-[[projects]]
   name = "gopkg.in/yaml.v2"
   packages = ["."]
   revision = "5420a8b6744d3b0345ab293f6fcba19c978f1183"
@@ -65,6 +68,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "af14e66e340f4cbed7d696d6f3d57b92936d524021a8c5f9cd256b4ed4511952"
+  inputs-digest = "c9323553bdaba40a321ebccfc8018294d2a830bdfa40b769b7bc7dde325a6c43"
   solver-name = "gps-cdcl"
   solver-version = 1
