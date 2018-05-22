@@ -33,9 +33,9 @@ var Config = struct {
 		URL string `default:"172.23.132.37:1884" env:"broker_url"`
 	}
 	Device struct {
-		Addr    string `default:"00000030"`
-		AppSKey [16]byte
-		NetSKey [16]byte
+		Addr    string   `default:"00000030"`
+		AppSKey [16]byte `default:"[0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6, 0xAB, 0xF7, 0x15, 0x88, 0x09, 0xCF, 0x4F, 0x3C]"`
+		NetSKey [16]byte `default:"[0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6, 0xAB, 0xF7, 0x15, 0x88, 0x09, 0xCF, 0x4F, 0x3C]"`
 	}
 }{}
 
@@ -75,8 +75,7 @@ func main() {
 				TopicFilter: []byte("gateway/+/rx"),
 				QoS:         mqtt.QoS0,
 				Handler: func(topicName, message []byte) {
-					fmt.Println(string(message))
-					fmt.Println()
+					log.Info(string(message))
 
 					var m lora.GatewayMessage
 					if err := json.Unmarshal(message, &m); err != nil {
@@ -84,7 +83,18 @@ func main() {
 						return
 					}
 
-					macPayload := m.PhyPayload.MACPayload.(*lorawan.MACPayload)
+					phyJSON, err := m.PhyPayload.MarshalJSON()
+					if err != nil {
+						log.Error(err)
+					}
+					log.Info(string(phyJSON))
+
+					macPayload, ok := m.PhyPayload.MACPayload.(*lorawan.MACPayload)
+					if !ok {
+						log.Error("*MACPayload expected")
+					}
+
+					log.Infof("DevAddr: %v", macPayload.FHDR.DevAddr)
 					if Config.Device.Addr == fmt.Sprintf("%v", macPayload.FHDR.DevAddr) {
 						ok, err := m.PhyPayload.ValidateMIC(Config.Device.NetSKey)
 						if err != nil {
@@ -93,6 +103,17 @@ func main() {
 						if !ok {
 							log.Error("Invalid MIC")
 						}
+
+						if err := m.PhyPayload.DecryptFRMPayload(Config.Device.AppSKey); err != nil {
+							log.Error(err)
+						}
+
+						pl, ok := macPayload.FRMPayload[0].(*lorawan.DataPayload)
+						if !ok {
+							log.Error("*DataPayload expected")
+						}
+
+						log.Info(pl.Bytes)
 					}
 				},
 			},
