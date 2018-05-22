@@ -17,6 +17,7 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/aiotrc/gm/lora"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/jinzhu/configor"
@@ -86,7 +87,7 @@ func main() {
 				Handler: func(topicName, message []byte) {
 					fmt.Println(string(message))
 
-					var m map[string]interface{}
+					var m lora.GatewayMessage
 					json.Unmarshal(message, &m)
 
 					fmt.Println(m)
