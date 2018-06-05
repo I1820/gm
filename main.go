@@ -11,6 +11,7 @@
 package main
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -18,6 +19,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"time"
 
 	"github.com/aiotrc/gm/lora"
 	"github.com/brocaar/lorawan"
@@ -71,6 +73,19 @@ func main() {
 	if err := configor.Load(&Config, "config.yml"); err != nil {
 		panic(err)
 	}
+
+	srv := &http.Server{
+		Addr:    ":1374",
+		Handler: handle(),
+	}
+
+	go func() {
+		fmt.Printf("GM Listen: %s\n", srv.Addr)
+		// service connections
+		if err := srv.ListenAndServe(); err != nil {
+			log.Fatal("Listen Error:", err)
+		}
+	}()
 
 	// Create an MQTT client
 	cli := client.New(&client.Options{
@@ -156,6 +171,12 @@ func main() {
 	<-sigc
 
 	fmt.Println("18.20 As always ... left me alone")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatal("Shutdown Error:", err)
+	}
 }
 
 func aboutHandler(c *gin.Context) {
