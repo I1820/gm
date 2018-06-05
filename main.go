@@ -57,6 +57,7 @@ func handle() http.Handler {
 	api := r.Group("/api")
 	{
 		api.GET("/about", aboutHandler)
+		api.POST("/decrypt", decryptHandler)
 	}
 
 	return r
@@ -162,4 +163,45 @@ func aboutHandler(c *gin.Context) {
 }
 
 func decryptHandler(c *gin.Context) {
+	c.Header("Content-Type", "application/json")
+
+	var json decryptReq
+	if err := c.BindJSON(&json); err != nil {
+		return
+	}
+
+	var phy lorawan.PHYPayload
+	if err := phy.UnmarshalBinary(json.PhyPayload); err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+
+	mac, ok := phy.MACPayload.(*lorawan.MACPayload)
+	if !ok {
+		c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("*MACPayload expected"))
+		return
+	}
+
+	ok, err := phy.ValidateMIC(Config.Device.NetSKey)
+	if err != nil {
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+	if !ok {
+		c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("Invalid MIC"))
+		return
+	}
+
+	if err := phy.DecryptFRMPayload(Config.Device.AppSKey); err != nil {
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+
+	data, ok := mac.FRMPayload[0].(*lorawan.DataPayload)
+	if !ok {
+		c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("*DataPayload expected"))
+		return
+	}
+
+	c.JSON(http.StatusOK, data.Bytes)
 }
