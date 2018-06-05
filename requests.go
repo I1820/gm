@@ -10,8 +10,9 @@
 
 package main
 
-// project request payload
-type gatewayReq struct {
-	Name    string `json:"name" binding:"required"`
-	Address string `json:"address" binding:"required"`
+// decrypt given payload with given keys
+type decryptReq struct {
+	PhyPayload []byte `json:"frame_payload" binding:"required"`
+	AppSKey    string `json:"appskey" binding: "required"`
+	NetSKey    string `json:"netskey" binding:"required"`
 }
