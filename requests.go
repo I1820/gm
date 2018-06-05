@@ -13,6 +13,6 @@ package main
 // decrypt given payload with given keys
 type decryptReq struct {
 	PhyPayload []byte `json:"phy_payload" binding:"required"`
-	AppSKey    string `json:"appskey" binding: "required"`
+	AppSKey    string `json:"appskey" binding:"required"`
 	NetSKey    string `json:"netskey" binding:"required"`
 }
