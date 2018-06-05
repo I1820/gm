@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"net/http"
 	"os"
 	"os/signal"
 
@@ -23,6 +24,7 @@ import (
 
 	"github.com/jinzhu/configor"
 
+	"github.com/gin-gonic/gin"
 	"github.com/yosssi/gmq/mqtt"
 	"github.com/yosssi/gmq/mqtt/client"
 )
@@ -41,6 +43,24 @@ var Config = struct {
 		NetSKey [16]byte `default:"[0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6, 0xAB, 0xF7, 0x15, 0x88, 0x09, 0xCF, 0x4F, 0x3C]"`
 	}
 }{}
+
+// handle registers apis and create http handler
+func handle() http.Handler {
+	r := gin.Default()
+
+	r.NoRoute(func(c *gin.Context) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "404 Not Found"})
+	})
+
+	r.Use(gin.ErrorLogger())
+
+	api := r.Group("/api")
+	{
+		api.GET("/about", aboutHandler)
+	}
+
+	return r
+}
 
 func main() {
 	fmt.Println("GM AIoTRC @ 2018")
@@ -134,4 +154,12 @@ func main() {
 	<-sigc
 
 	fmt.Println("18.20 As always ... left me alone")
+}
+
+func aboutHandler(c *gin.Context) {
+	c.String(http.StatusOK, "18.20 is leaving us")
+
+}
+
+func decryptHandler(c *gin.Context) {
 }
