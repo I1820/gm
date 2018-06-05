@@ -11,6 +11,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/rand"
@@ -170,6 +171,22 @@ func decryptHandler(c *gin.Context) {
 		return
 	}
 
+	appSKeySlice, err := hex.DecodeString(json.AppSKey)
+	if err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+	var appSKey lorawan.AES128Key
+	copy(appSKey[:], appSKeySlice[:])
+
+	netSKeySlice, err := hex.DecodeString(json.NetSKey)
+	if err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+	var netSKey lorawan.AES128Key
+	copy(netSKey[:], netSKeySlice[:])
+
 	var phy lorawan.PHYPayload
 	if err := phy.UnmarshalBinary(json.PhyPayload); err != nil {
 		c.AbortWithError(http.StatusBadRequest, err)
@@ -182,17 +199,17 @@ func decryptHandler(c *gin.Context) {
 		return
 	}
 
-	ok, err := phy.ValidateMIC(Config.Device.NetSKey)
+	success, err := phy.ValidateMIC(netSKey)
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, err)
 		return
 	}
-	if !ok {
+	if !success {
 		c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("Invalid MIC"))
 		return
 	}
 
-	if err := phy.DecryptFRMPayload(Config.Device.AppSKey); err != nil {
+	if err := phy.DecryptFRMPayload(appSKey); err != nil {
 		c.AbortWithError(http.StatusInternalServerError, err)
 		return
 	}
