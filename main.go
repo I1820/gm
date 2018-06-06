@@ -132,6 +132,7 @@ func main() {
 					macPayload, ok := m.PhyPayload.MACPayload.(*lorawan.MACPayload)
 					if !ok {
 						log.Error("*MACPayload expected")
+						return
 					}
 
 					log.Infof("DevAddr: %v", macPayload.FHDR.DevAddr)
