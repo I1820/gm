@@ -35,7 +35,7 @@ import (
 // Config represents main configuration
 var Config = struct {
 	Broker struct {
-		URL string `default:"172.23.132.37:1883" env:"broker_url"`
+		URL string `default:"127.0.0.1:1883" env:"broker_url"`
 	}
 	Device struct {
 		// Addr string `default:"2601146f"`
