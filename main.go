@@ -17,30 +17,14 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/brocaar/lorawan"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/jinzhu/configor"
-
 	"github.com/gin-gonic/gin"
 )
-
-// Config represents main configuration
-var Config = struct {
-	Broker struct {
-		URL string `default:"127.0.0.1:1883" env:"broker_url"`
-	}
-	Device struct {
-		// Addr string `default:"2601146f"`
-		Addr string `default:"0000003a"`
-		// AppSKey [16]byte `default:"[0x29, 0xCB, 0xD0, 0x5A, 0x4C, 0xB9, 0xFB, 0xC5, 0x16, 0x6A, 0x89, 0xE6, 0x71, 0xC0, 0xEF, 0xCE]"`
-		AppSKey [16]byte `default:"[0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6, 0xAB, 0xF7, 0x15, 0x88, 0x09, 0xCF, 0x4F, 0x3C]"`
-		// NetSKey [16]byte `default:"[0x5E, 0xD4, 0x38, 0xE5, 0xC8, 0x6E, 0xDD, 0x00, 0xCE, 0x0E, 0xD6, 0x22, 0x2A, 0x99, 0xE6, 0x84]"`
-		NetSKey [16]byte `default:"[0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6, 0xAB, 0xF7, 0x15, 0x88, 0x09, 0xCF, 0x4F, 0x3C]"`
-	}
-}{}
 
 // handle registers apis and create http handler
 func handle() http.Handler {
@@ -64,11 +48,6 @@ func handle() http.Handler {
 func main() {
 	fmt.Println("GM AIoTRC @ 2018")
 
-	// Load configuration
-	if err := configor.Load(&Config, "config.yml"); err != nil {
-		panic(err)
-	}
-
 	srv := &http.Server{
 		Addr:    ":1374",
 		Handler: handle(),
@@ -84,7 +63,7 @@ func main() {
 
 	// Set up channel on which to send signal notifications.
 	sigc := make(chan os.Signal, 1)
-	signal.Notify(sigc, os.Interrupt, os.Kill)
+	signal.Notify(sigc, os.Interrupt, syscall.SIGTERM)
 
 	// Wait for receiving a signal.
 	<-sigc
@@ -108,55 +87,56 @@ func decryptHandler(c *gin.Context) {
 
 	var json decryptReq
 	if err := c.BindJSON(&json); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	appSKeySlice, err := hex.DecodeString(json.AppSKey)
 	if err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	var appSKey lorawan.AES128Key
-	copy(appSKey[:], appSKeySlice[:])
+	copy(appSKey[:], appSKeySlice)
 
 	netSKeySlice, err := hex.DecodeString(json.NetSKey)
 	if err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	var netSKey lorawan.AES128Key
-	copy(netSKey[:], netSKeySlice[:])
+	copy(netSKey[:], netSKeySlice)
 
 	var phy lorawan.PHYPayload
 	if err := phy.UnmarshalBinary(json.PhyPayload); err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	mac, ok := phy.MACPayload.(*lorawan.MACPayload)
 	if !ok {
-		c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("*MACPayload expected"))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "*MACPayload expected"})
 		return
 	}
 
 	success, err := phy.ValidateMIC(netSKey)
 	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	if !success {
-		c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("Invalid MIC"))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid MIC"})
 		return
 	}
 
 	if err := phy.DecryptFRMPayload(appSKey); err != nil {
-		c.AbortWithError(http.StatusInternalServerError, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	data, ok := mac.FRMPayload[0].(*lorawan.DataPayload)
 	if !ok {
-		c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("*DataPayload expected"))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "*DataPayload expected"})
 		return
 	}
 
