@@ -8,7 +8,7 @@ type GatewayMessage struct {
 	PhyPayload lorawan.PHYPayload `json:"phyPayload"`
 }
 
-// RxInfo contains gateway infomation that payloads
+// RxInfo contains gateway information that payloads
 // received from it.
 type RxInfo struct {
 	Mac       string
