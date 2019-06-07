@@ -31,7 +31,7 @@ func handle() http.Handler {
 	r := gin.Default()
 
 	r.NoRoute(func(c *gin.Context) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "404 Not Found"})
+		c.JSON(http.StatusNotFound, gin.H{"message": "404 Not Found"})
 	})
 
 	r.Use(gin.ErrorLogger())
@@ -87,13 +87,13 @@ func decryptHandler(c *gin.Context) {
 
 	var json decryptReq
 	if err := c.BindJSON(&json); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 		return
 	}
 
 	appSKeySlice, err := hex.DecodeString(json.AppSKey)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 		return
 	}
 	var appSKey lorawan.AES128Key
@@ -101,7 +101,7 @@ func decryptHandler(c *gin.Context) {
 
 	netSKeySlice, err := hex.DecodeString(json.NetSKey)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 		return
 	}
 	var netSKey lorawan.AES128Key
@@ -109,34 +109,34 @@ func decryptHandler(c *gin.Context) {
 
 	var phy lorawan.PHYPayload
 	if err := phy.UnmarshalBinary(json.PhyPayload); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 		return
 	}
 
 	mac, ok := phy.MACPayload.(*lorawan.MACPayload)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "*MACPayload expected"})
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "*MACPayload expected"})
 		return
 	}
 
 	success, err := phy.ValidateMIC(netSKey)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
 		return
 	}
 	if !success {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid MIC"})
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Invalid MIC"})
 		return
 	}
 
 	if err := phy.DecryptFRMPayload(appSKey); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
 		return
 	}
 
 	data, ok := mac.FRMPayload[0].(*lorawan.DataPayload)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "*DataPayload expected"})
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "*DataPayload expected"})
 		return
 	}
 
