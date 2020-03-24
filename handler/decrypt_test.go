@@ -11,7 +11,6 @@ import (
 )
 
 func (suite *Suite) TestDecrypt() {
-
 	data, err := json.Marshal(request.Decrypt{
 		AppSKey: "2B7E151628AED2A6ABF7158809CF4F3C",
 		NetSKey: "2B7E151628AED2A6ABF7158809CF4F3C",
