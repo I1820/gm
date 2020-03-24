@@ -119,7 +119,7 @@ func decryptHandler(c *gin.Context) {
 		return
 	}
 
-	success, err := phy.ValidateMIC(netSKey)
+	success, err := phy.ValidateUplinkJoinMIC(netSKey)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
 		return
