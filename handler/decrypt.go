@@ -50,15 +50,6 @@ func (LoRa) Decrypt(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "*MACPayload expected")
 	}
 
-	success, err := phy.ValidateUplinkJoinMIC(netSKey)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
-	}
-
-	if !success {
-		return echo.NewHTTPError(http.StatusInternalServerError, "Invalid MIC")
-	}
-
 	if err := phy.DecryptFRMPayload(appSKey); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
