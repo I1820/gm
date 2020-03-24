@@ -26,14 +26,18 @@ func (LoRa) Decrypt(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
+
 	var appSKey lorawan.AES128Key
+
 	copy(appSKey[:], appSKeySlice)
 
 	netSKeySlice, err := hex.DecodeString(rq.NetSKey)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
+
 	var netSKey lorawan.AES128Key
+
 	copy(netSKey[:], netSKeySlice)
 
 	var phy lorawan.PHYPayload
@@ -50,6 +54,7 @@ func (LoRa) Decrypt(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
+
 	if !success {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Invalid MIC")
 	}
